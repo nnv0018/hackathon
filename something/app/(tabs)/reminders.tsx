@@ -1,25 +1,20 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { subscribeToPatients } from '../../services/patients';
 
 type ReminderStatus = 'upcoming' | 'done' | 'missed';
-interface Reminder { id: string; patient: string; medicine: string; dosage: string; time: string; status: ReminderStatus; urgent: boolean; }
 
-const REMINDERS: { section: string; icon: any; data: Reminder[] }[] = [
-  { section: 'Morning', icon: 'sunny-outline', data: [
-    { id: '1', patient: 'John Doe', medicine: 'Lisinopril', dosage: '10mg', time: '8:00 AM', status: 'done', urgent: false },
-    { id: '2', patient: 'Jane Smith', medicine: 'Metformin', dosage: '500mg', time: '9:30 AM', status: 'upcoming', urgent: true },
-  ]},
-  { section: 'Afternoon', icon: 'partly-sunny-outline', data: [
-    { id: '3', patient: 'Bob Lee', medicine: 'Vitamin D3', dosage: '2000 IU', time: '12:00 PM', status: 'upcoming', urgent: false },
-    { id: '4', patient: 'Maria Garcia', medicine: 'Atorvastatin', dosage: '20mg', time: '2:00 PM', status: 'missed', urgent: false },
-  ]},
-  { section: 'Evening', icon: 'moon-outline', data: [
-    { id: '5', patient: 'John Doe', medicine: 'Aspirin', dosage: '81mg', time: '8:00 PM', status: 'upcoming', urgent: false },
-    { id: '6', patient: 'Jane Smith', medicine: 'Metformin', dosage: '500mg', time: '9:00 PM', status: 'upcoming', urgent: true },
-  ]},
-];
+interface Reminder { 
+  id: string; 
+  patient: string; 
+  medicine: string; 
+  dosage: string; 
+  time: string; 
+  status: ReminderStatus; 
+  urgent: boolean; 
+}
 
 function statusStyle(status: ReminderStatus) {
   switch (status) {
@@ -29,64 +24,125 @@ function statusStyle(status: ReminderStatus) {
   }
 }
 
+// Helper function to convert "8:00 AM" into a real Date object for today
+function parseTimeToToday(timeStr: string): Date {
+  if (!timeStr) return new Date();
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':');
+  let hrs = parseInt(hours, 10);
+  
+  if (modifier === 'PM' && hrs < 12) hrs += 12;
+  if (modifier === 'AM' && hrs === 12) hrs = 0;
+
+  const date = new Date();
+  date.setHours(hrs, parseInt(minutes, 10), 0, 0);
+  return date;
+}
+
 export default function RemindersScreen() {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToPatients((patients) => {
+      const now = new Date();
+
+      const mappedReminders = patients.map((p: any) => {
+        let currentStatus: ReminderStatus = p.status || 'upcoming';
+
+        // Automatically mark as missed if the time has passed and it's not done
+        if (currentStatus !== 'done' && p.time) {
+          const reminderTime = parseTimeToToday(p.time);
+          if (now > reminderTime) {
+            currentStatus = 'missed';
+          }
+        }
+
+        return {
+          id: p.id,
+          patient: p.name,
+          medicine: p.medicine,
+          dosage: p.dosage,
+          time: p.time,
+          status: currentStatus,
+          urgent: p.urgent || false,
+        };
+      });
+
+      // Optional: Sort so 'missed' and 'upcoming' are at the top, 'done' at the bottom
+      mappedReminders.sort((a, b) => {
+        if (a.status === 'done' && b.status !== 'done') return 1;
+        if (b.status === 'done' && a.status !== 'done') return -1;
+        return 0;
+      });
+
+      setReminders(mappedReminders);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Calculate summary
+  const total = reminders.length;
+  const upcoming = reminders.filter(r => r.status === 'upcoming').length;
+  const done = reminders.filter(r => r.status === 'done').length;
+  const missed = reminders.filter(r => r.status === 'missed').length;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Reminders</Text>
-        <Text style={styles.headerDate}>Today, Feb 21</Text>
+        <Text style={styles.headerDate}>
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+        </Text>
       </View>
 
       <View style={styles.summaryRow}>
-        {[['6','#1C1C1E','Total'],['4','#007AFF','Upcoming'],['1','#34C759','Done'],['1','#FF3B30','Missed']].map(([num, color, label]) => (
-          <View key={label} style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color }]}>{num}</Text>
-            <Text style={styles.summaryLabel}>{label}</Text>
+        {[ 
+          [total, '#1C1C1E', 'Total'], 
+          [upcoming, '#007AFF', 'Upcoming'], 
+          [done, '#34C759', 'Done'], 
+          [missed, '#FF3B30', 'Missed'] 
+        ].map(([num, color, label]) => (
+          <View key={label as string} style={styles.summaryCard}>
+            <Text style={[styles.summaryNumber, { color: color as string }]}>{num as number}</Text>
+            <Text style={styles.summaryLabel}>{label as string}</Text>
           </View>
         ))}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {REMINDERS.map((group) => (
-          <View key={group.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name={group.icon} size={16} color="#8E8E93" />
-              <Text style={styles.sectionTitle}>{group.section}</Text>
-            </View>
-            <View style={styles.cardsList}>
-              {group.data.map((r) => {
-                const s = statusStyle(r.status);
-                return (
-                  <View key={r.id} style={[styles.reminderCard, r.urgent && styles.reminderCardUrgent]}>
-                    <View style={styles.reminderLeft}>
-                      <View style={[styles.pillIcon, { backgroundColor: s.bg }]}>
-                        <Ionicons name="medical-outline" size={20} color={s.text} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.reminderTopRow}>
-                          <Text style={styles.medicineName}>{r.medicine}</Text>
-                          {r.urgent && (
-                            <View style={styles.lowStockBadge}>
-                              <Text style={styles.lowStockText}>LOW STOCK</Text>
-                            </View>
-                          )}
+        <View style={styles.cardsList}>
+          {reminders.map((r) => {
+            const s = statusStyle(r.status);
+            return (
+              <View key={r.id} style={[styles.reminderCard, r.urgent && styles.reminderCardUrgent]}>
+                <View style={styles.reminderLeft}>
+                  <View style={[styles.pillIcon, { backgroundColor: s.bg }]}> 
+                    <Ionicons name="medical-outline" size={20} color={s.text} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.reminderTopRow}>
+                      <Text style={styles.medicineName}>{r.medicine}</Text>
+                      {r.urgent && (
+                        <View style={styles.lowStockBadge}>
+                          <Text style={styles.lowStockText}>LOW STOCK</Text>
                         </View>
-                        <Text style={styles.dosageText}>{r.dosage} · {r.patient}</Text>
-                        <View style={styles.timeRow}>
-                          <Ionicons name="time-outline" size={13} color="#8E8E93" />
-                          <Text style={styles.timeText}>{r.time}</Text>
-                        </View>
-                      </View>
+                      )}
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
-                      <Text style={[styles.statusText, { color: s.text }]}>{s.label}</Text>
+                    <Text style={styles.dosageText}>{r.dosage} · {r.patient}</Text>
+                    <View style={styles.timeRow}>
+                      <Ionicons name="time-outline" size={13} color="#8E8E93" />
+                      <Text style={styles.timeText}>{r.time}</Text>
                     </View>
                   </View>
-                );
-              })}
-            </View>
-          </View>
-        ))}
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: s.bg }]}> 
+                  <Text style={[styles.statusText, { color: s.text }]}>{s.label}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
