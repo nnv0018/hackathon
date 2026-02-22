@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../services/firebase';
 
 const USER = {
   name: 'Dr. Sarah Smith',
@@ -13,9 +16,9 @@ const USER = {
   hospital: 'City General Hospital',
 };
 
-function SettingRow({ icon, label, value, danger = false }: { icon: any; label: string; value?: string; danger?: boolean }) {
+function SettingRow({ icon, label, value, danger = false, onPress }: { icon: any; label: string; value?: string; danger?: boolean; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.settingRow} activeOpacity={0.7} onPress={onPress}>
       <View style={[styles.settingIconBox, danger && styles.settingIconBoxDanger]}>
         <Ionicons name={icon} size={18} color={danger ? '#FF3B30' : '#007AFF'} />
       </View>
@@ -29,6 +32,20 @@ function SettingRow({ icon, label, value, danger = false }: { icon: any; label: 
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
+
+  function handleSignOut() {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out', style: 'destructive', onPress: async () => {
+          await signOut(auth);
+          router.replace('/login');
+        }
+      },
+    ]);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -73,7 +90,7 @@ export default function ProfileScreen() {
 
         <Text style={styles.sectionLabel}>ACCOUNT</Text>
         <View style={styles.card}>
-          <SettingRow icon="log-out-outline" label="Sign Out" danger />
+          <SettingRow icon="log-out-outline" label="Sign Out" danger onPress={handleSignOut} />
         </View>
 
         <Text style={styles.version}>MediTrack v1.0.0</Text>
