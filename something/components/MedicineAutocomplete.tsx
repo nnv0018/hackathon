@@ -1,19 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { MEDICINES } from '../constants/medicines';
+import { MEDICINES, MedicineInfo } from '../constants/medicines';
 
 interface Props {
   value: string;
   onSelect: (name: string) => void;
+  onSelectFull: (info: MedicineInfo) => void;
   inputStyle?: any;
 }
 
-export function MedicineAutocomplete({ value, onSelect, inputStyle }: Props) {
+export function MedicineAutocomplete({ value, onSelect, onSelectFull, inputStyle }: Props) {
   const [focused, setFocused] = useState(false);
+  const didSelectRef = useRef(false);
 
   const suggestions = focused && value.length >= 1
-    ? MEDICINES.filter(m => m.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
+    ? MEDICINES.filter(m => m.name.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
     : [];
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      setFocused(false);
+      if (!didSelectRef.current) {
+        const valid = MEDICINES.some(m => m.name.toLowerCase() === value.toLowerCase());
+        if (!valid) onSelect('');
+      }
+      didSelectRef.current = false;
+    }, 200);
+  };
+
+  const handleSelect = (info: MedicineInfo) => {
+    didSelectRef.current = true;
+    onSelect(info.name);
+    onSelectFull(info);
+    setFocused(false);
+  };
 
   return (
     <View>
@@ -21,22 +41,23 @@ export function MedicineAutocomplete({ value, onSelect, inputStyle }: Props) {
         style={inputStyle}
         placeholder="Name of medicine"
         value={value}
-        onChangeText={onSelect}
+        onChangeText={(v) => { didSelectRef.current = false; onSelect(v); }}
         onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onBlur={handleBlur}
         autoCorrect={false}
         autoCapitalize="words"
       />
       {suggestions.length > 0 && (
         <View style={styles.dropdown}>
-          {suggestions.map((name) => (
+          {suggestions.map((info) => (
             <TouchableOpacity
-              key={name}
+              key={info.name}
               style={styles.item}
-              onPress={() => { onSelect(name); setFocused(false); }}
+              onPressIn={() => handleSelect(info)}
               activeOpacity={0.7}
             >
-              <Text style={styles.itemText}>{name}</Text>
+              <Text style={styles.itemName}>{info.name}</Text>
+              <Text style={styles.itemSub}>{info.category} · {info.dosageForm} · {info.strength}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -57,13 +78,18 @@ const styles = StyleSheet.create({
   },
   item: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F2F2F7',
   },
-  itemText: {
+  itemName: {
     fontSize: 15,
     color: '#1C1C1E',
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  itemSub: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
   },
 });

@@ -22,6 +22,12 @@ const TIME_OPTIONS = [
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Medicine {
   name: string;
+  category?: string;
+  dosageForm?: string;
+  strength?: string;
+  manufacturer?: string;
+  indication?: string;
+  classification?: string;
   totalPillsPrescribed: string;
   pillsPerDayToBeTaken: string;
   daysPerWeekToTakeThePrescription: string;
@@ -95,6 +101,12 @@ export default function PatientProfileScreen() {
   // Add Medicine modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [medName, setMedName] = useState('');
+  const [medCategory, setMedCategory] = useState('');
+  const [medDosageForm, setMedDosageForm] = useState('');
+  const [medStrength, setMedStrength] = useState('');
+  const [medManufacturer, setMedManufacturer] = useState('');
+  const [medIndication, setMedIndication] = useState('');
+  const [medClassification, setMedClassification] = useState('');
   const [totalPills, setTotalPills] = useState('30');
   const [pillsPerDay, setPillsPerDay] = useState(1);
   const [daysPerWeek, setDaysPerWeek] = useState(7);
@@ -127,7 +139,9 @@ export default function PatientProfileScreen() {
   };
 
   const resetMedForm = () => {
-    setMedName(''); setTotalPills('30'); setPillsPerDay(1);
+    setMedName(''); setMedCategory(''); setMedDosageForm(''); setMedStrength('');
+    setMedManufacturer(''); setMedIndication(''); setMedClassification('');
+    setTotalPills('30'); setPillsPerDay(1);
     setDaysPerWeek(7); setPillSchedules(['']); setRefillOrNot(false);
   };
 
@@ -138,6 +152,8 @@ export default function PatientProfileScreen() {
     }
     const newMed: Medicine = {
       name: medName.trim(),
+      category: medCategory, dosageForm: medDosageForm, strength: medStrength,
+      manufacturer: medManufacturer, indication: medIndication, classification: medClassification,
       totalPillsPrescribed: totalPills,
       pillsPerDayToBeTaken: String(pillsPerDay),
       daysPerWeekToTakeThePrescription: String(daysPerWeek),
@@ -341,6 +357,12 @@ export default function PatientProfileScreen() {
           <MedicineAutocomplete
             value={medName}
             onSelect={setMedName}
+            onSelectFull={(info) => {
+              setMedName(info.name); setMedCategory(info.category);
+              setMedDosageForm(info.dosageForm); setMedStrength(info.strength);
+              setMedManufacturer(info.manufacturer); setMedIndication(info.indication);
+              setMedClassification(info.classification);
+            }}
             inputStyle={mStyles.input}
           />
 

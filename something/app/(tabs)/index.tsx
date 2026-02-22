@@ -39,6 +39,12 @@ const LBS_ITEMS   = Array.from({ length: 451 }, (_, i) => `${50 + i} lbs`);
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Medicine {
   name: string;
+  category: string;
+  dosageForm: string;
+  strength: string;
+  manufacturer: string;
+  indication: string;
+  classification: string;
   totalPillsPrescribed: string;
   pillsPerDayToBeTaken: string;
   daysPerWeekToTakeThePrescription: string;
@@ -48,6 +54,12 @@ interface Medicine {
 
 interface MedicineForm {
   name: string;
+  category: string;
+  dosageForm: string;
+  strength: string;
+  manufacturer: string;
+  indication: string;
+  classification: string;
   totalPillsPrescribed: number;
   pillsPerDayToBeTaken: number;
   daysPerWeekToTakeThePrescription: number;
@@ -224,13 +236,27 @@ export default function HomeScreen() {
   // ── Medicine helpers ──
   const addMedicineField = () => {
     setMedicinesForm(prev => [...prev, {
-      name: '',
+      name: '', category: '', dosageForm: '', strength: '',
+      manufacturer: '', indication: '', classification: '',
       totalPillsPrescribed: 30,
       pillsPerDayToBeTaken: 1,
       daysPerWeekToTakeThePrescription: 7,
       pillSchedules: [''],
       refillOrNot: false,
     }]);
+  };
+
+  const applyMedicineInfo = (idx: number, info: import('../../constants/medicines').MedicineInfo) => {
+    setMedicinesForm(prev => {
+      const updated = [...prev];
+      updated[idx] = {
+        ...updated[idx],
+        name: info.name, category: info.category, dosageForm: info.dosageForm,
+        strength: info.strength, manufacturer: info.manufacturer,
+        indication: info.indication, classification: info.classification,
+      };
+      return updated;
+    });
   };
 
   const updateMedicineField = (idx: number, field: keyof Omit<MedicineForm, 'pillSchedules' | 'pillsPerDayToBeTaken'>, value: any) => {
@@ -287,6 +313,12 @@ export default function HomeScreen() {
     const dob = `${MONTHS[dobMonth - 1]} ${dobDay}, ${dobYear}`;
     const medicines: Medicine[] = medicinesForm.map(m => ({
       name: m.name,
+      category: m.category,
+      dosageForm: m.dosageForm,
+      strength: m.strength,
+      manufacturer: m.manufacturer,
+      indication: m.indication,
+      classification: m.classification,
       totalPillsPrescribed: String(m.totalPillsPrescribed),
       pillsPerDayToBeTaken: String(m.pillsPerDayToBeTaken),
       daysPerWeekToTakeThePrescription: String(m.daysPerWeekToTakeThePrescription),
@@ -575,6 +607,7 @@ export default function HomeScreen() {
               <MedicineAutocomplete
                 value={med.name}
                 onSelect={(v) => updateMedicineField(idx, 'name', v)}
+                onSelectFull={(info) => applyMedicineInfo(idx, info)}
                 inputStyle={styles.input}
               />
 
