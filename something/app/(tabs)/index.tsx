@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db, auth } from '../../services/firebase';
+import { MedicineAutocomplete } from '../../components/MedicineAutocomplete';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -571,11 +572,10 @@ export default function HomeScreen() {
               </View>
 
               {/* Medicine name */}
-              <TextInput
-                style={styles.input}
-                placeholder="Name of medicine"
+              <MedicineAutocomplete
                 value={med.name}
-                onChangeText={(v) => updateMedicineField(idx, 'name', v)}
+                onSelect={(v) => updateMedicineField(idx, 'name', v)}
+                inputStyle={styles.input}
               />
 
               {/* Total pills prescribed – stepper */}
